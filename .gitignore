@@ -1,0 +1,23 @@
+# Build output
+StupidNotch.app/
+dist/
+
+# macOS
+.DS_Store
+
+# Editor / tooling
+.claude/
+.vscode/
+.idea/
+.swiftpm/
+*.xcuserstate
+xcuserdata/
+
+# Swift / Xcode
+build/
+DerivedData/
+*.build/
+*.swiftmodule
+*.swiftdoc
+*.o
+*.dSYM/

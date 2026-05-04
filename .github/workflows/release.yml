@@ -1,0 +1,58 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: 'Release tag (e.g. v1.0)'
+        required: true
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build universal app
+        run: ./build.sh
+
+      - name: Package and compute artifact metadata
+        id: artifact
+        run: |
+          VERSION=$(plutil -extract CFBundleShortVersionString raw Resources/Info.plist)
+          mkdir -p dist
+          ZIP="dist/StupidNotch-v${VERSION}.zip"
+          ditto -c -k --sequesterRsrc --keepParent StupidNotch.app "$ZIP"
+          SHA=$(shasum -a 256 "$ZIP" | cut -d' ' -f1)
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+          echo "zip=$ZIP" >> "$GITHUB_OUTPUT"
+          echo "sha=$SHA" >> "$GITHUB_OUTPUT"
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ github.event_name == 'workflow_dispatch' && inputs.tag || github.ref_name }}
+          name: ${{ github.event_name == 'workflow_dispatch' && inputs.tag || github.ref_name }}
+          files: ${{ steps.artifact.outputs.zip }}
+          generate_release_notes: true
+          body: |
+            ### Install
+
+            Download `StupidNotch-v${{ steps.artifact.outputs.version }}.zip`, unzip, and move `StupidNotch.app` to `/Applications`.
+
+            First launch: macOS will block the app because it isn't signed with a paid Developer ID. Either right-click → **Open**, or run:
+            ```bash
+            xattr -cr /Applications/StupidNotch.app
+            ```
+
+            ### Checksum
+
+            ```
+            ${{ steps.artifact.outputs.sha }}  StupidNotch-v${{ steps.artifact.outputs.version }}.zip
+            ```

@@ -2,31 +2,29 @@ import Cocoa
 import SwiftUI
 
 final class AppDelegate: NSObject, NSApplicationDelegate {
-    private var statusItem: NSStatusItem!
-    private var popover: NSPopover!
+    private var window: NSWindow!
     private var manager: OverlayManager!
-    private var eventMonitor: Any?
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         manager = OverlayManager()
 
-        statusItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.variableLength)
-        if let button = statusItem.button {
-            button.image = NSImage(
-                systemSymbolName: "rectangle.topthird.inset.filled",
-                accessibilityDescription: "StupidNotch"
-            )
-            button.image?.isTemplate = true
-            button.action = #selector(togglePopover(_:))
-            button.target = self
-        }
+        let content = SettingsView(manager: manager)
+        let hosting = NSHostingController(rootView: content)
 
-        popover = NSPopover()
-        popover.behavior = .applicationDefined
-        popover.animates = true
-        popover.contentViewController = NSHostingController(
-            rootView: SettingsView(manager: manager)
+        window = NSWindow(
+            contentRect: NSRect(x: 0, y: 0, width: 360, height: 420),
+            styleMask: [.titled, .closable, .miniaturizable],
+            backing: .buffered,
+            defer: false
         )
+        window.title = "StupidNotch"
+        window.contentViewController = hosting
+        window.center()
+        window.setFrameAutosaveName("StupidNotchMainWindow")
+        window.isReleasedWhenClosed = false
+        window.makeKeyAndOrderFront(nil)
+
+        NSApp.activate(ignoringOtherApps: true)
 
         NotificationCenter.default.addObserver(
             self,
@@ -42,30 +40,16 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         )
     }
 
-    @objc private func togglePopover(_ sender: Any?) {
-        guard let button = statusItem.button else { return }
-        if popover.isShown {
-            closePopover()
-        } else {
-            manager.refreshState()
+    func applicationShouldHandleReopen(_ sender: NSApplication, hasVisibleWindows flag: Bool) -> Bool {
+        if !flag {
+            window.makeKeyAndOrderFront(nil)
             NSApp.activate(ignoringOtherApps: true)
-            popover.show(relativeTo: button.bounds, of: button, preferredEdge: .minY)
-            popover.contentViewController?.view.window?.makeKey()
-
-            eventMonitor = NSEvent.addGlobalMonitorForEvents(
-                matching: [.leftMouseDown, .rightMouseDown]
-            ) { [weak self] _ in
-                self?.closePopover()
-            }
         }
+        return true
     }
 
-    private func closePopover() {
-        popover.performClose(nil)
-        if let monitor = eventMonitor {
-            NSEvent.removeMonitor(monitor)
-            eventMonitor = nil
-        }
+    func applicationShouldTerminateAfterLastWindowClosed(_ sender: NSApplication) -> Bool {
+        return false
     }
 
     @objc private func screensChanged() {

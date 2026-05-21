@@ -12,6 +12,9 @@ RES="$CONTENTS/Resources"
 rm -rf "$BUNDLE"
 mkdir -p "$MACOS" "$RES"
 cp Resources/Info.plist "$CONTENTS/Info.plist"
+if [ -f Resources/StupidNotch.icns ]; then
+    cp Resources/StupidNotch.icns "$RES/StupidNotch.icns"
+fi
 
 # Build a universal binary so it runs on both Apple Silicon and Intel Macs.
 ARM_BIN="$(mktemp -t stupidnotch-arm)"

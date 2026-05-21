@@ -7,13 +7,6 @@ struct SettingsView: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
-            header
-                .padding(.horizontal, 16)
-                .padding(.top, 14)
-                .padding(.bottom, 10)
-
-            Divider()
-
             VStack(alignment: .leading, spacing: 12) {
                 sectionLabel("Corners")
 
@@ -52,7 +45,8 @@ struct SettingsView: View {
                 }
             }
             .padding(.horizontal, 16)
-            .padding(.vertical, 12)
+            .padding(.top, 14)
+            .padding(.bottom, 12)
 
             Divider()
 
@@ -70,46 +64,30 @@ struct SettingsView: View {
         .onAppear { manager.refreshState() }
     }
 
-    private var header: some View {
-        HStack(spacing: 8) {
-            Image(systemName: "rectangle.topthird.inset.filled")
-                .font(.title3)
-            Text("StupidNotch").font(.headline)
-            if manager.isProcessing {
-                ProgressView()
-                    .controlSize(.small)
-                    .padding(.leading, 2)
-            }
-            Spacer()
-            Button {
-                NSApp.terminate(nil)
-            } label: {
-                Image(systemName: "power").foregroundColor(.secondary)
-            }
-            .buttonStyle(.plain)
-            .help("Quit")
-        }
-    }
-
     @ViewBuilder
     private var actionArea: some View {
-        if manager.isApplied {
-            Button {
-                manager.remove()
-            } label: {
-                Label("Remove notch mask", systemImage: "rectangle.dashed")
-                    .frame(maxWidth: .infinity)
+        HStack(spacing: 8) {
+            if manager.isApplied {
+                Button {
+                    manager.remove()
+                } label: {
+                    Label("Remove notch mask", systemImage: "rectangle.dashed")
+                        .frame(maxWidth: .infinity)
+                }
+                .controlSize(.large)
+            } else {
+                Button {
+                    manager.apply()
+                } label: {
+                    Label("Apply notch mask", systemImage: "rectangle.topthird.inset.filled")
+                        .frame(maxWidth: .infinity)
+                }
+                .controlSize(.large)
+                .disabled(!manager.hasNotch || manager.isProcessing)
             }
-            .controlSize(.large)
-        } else {
-            Button {
-                manager.apply()
-            } label: {
-                Label("Apply notch mask", systemImage: "rectangle.topthird.inset.filled")
-                    .frame(maxWidth: .infinity)
+            if manager.isProcessing {
+                ProgressView().controlSize(.small)
             }
-            .controlSize(.large)
-            .disabled(!manager.hasNotch || manager.isProcessing)
         }
     }
 

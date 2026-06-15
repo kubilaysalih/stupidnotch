@@ -121,7 +121,6 @@ enum WallpaperMasker {
             }
             return outURL
         } catch {
-            NSLog("StupidNotch: capture failed: \(error)")
             return nil
         }
     }
@@ -332,10 +331,7 @@ enum WallpaperMasker {
         case .circular:
             path.addQuadCurve(to: to, control: corner)
         case .continuous:
-            // figma-squircle math (smoothness = 1.0)
-            //   https://www.figma.com/blog/desperately-seeking-squircles/
-            // For s = 1, arcMeasure = 0 → two cubic beziers cover the whole corner.
-            // a + b + c + d = p (the distance along each edge from the corner).
+
             let p = hypot(corner.x - from.x, corner.y - from.y)
             guard p > 0 else { path.addLine(to: to); return }
 

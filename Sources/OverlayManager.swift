@@ -4,13 +4,13 @@ import Combine
 final class OverlayManager: ObservableObject {
     @Published var cornerRadius: Double {
         didSet {
-            AppSettings.cornerRadius = cornerRadius
+            AppSettings.shared.cornerRadius = cornerRadius
             if isApplied { render() }
         }
     }
     @Published var cornerStyle: CornerStyle {
         didSet {
-            AppSettings.cornerStyle = cornerStyle.rawValue
+            AppSettings.shared.cornerStyle = cornerStyle.rawValue
             if isApplied { render() }
         }
     }
@@ -23,9 +23,9 @@ final class OverlayManager: ObservableObject {
     private let renderQueue = DispatchQueue(label: "io.kubilay.stupidnotch.render", qos: .userInitiated)
 
     init() {
-        self.cornerRadius = AppSettings.cornerRadius
-        self.cornerStyle = CornerStyle(rawValue: AppSettings.cornerStyle) ?? .circular
-        if let stored = AppSettings.originalWallpaperPath {
+        self.cornerRadius = AppSettings.shared.cornerRadius
+        self.cornerStyle = CornerStyle(rawValue: AppSettings.shared.cornerStyle) ?? .circular
+        if let stored = AppSettings.shared.originalWallpaperPath {
             let url = URL(fileURLWithPath: stored)
             if FileManager.default.fileExists(atPath: url.path) {
                 self.cachedOriginalURL = url
@@ -48,6 +48,21 @@ final class OverlayManager: ObservableObject {
 
     func apply() {
         guard let screen = NSScreen.builtInWithNotch else { return }
+
+        // Fast path: a still-image wallpaper is just a file on disk. Read it
+        // straight from `desktopImageURL` and mask it — no screen capture, so
+        // no Screen Recording permission needed. Only fall back to the
+        // ScreenCaptureKit grab (which DOES need permission) when the wallpaper
+        // isn't a plain static image we can read directly.
+        if let current = NSWorkspace.shared.desktopImageURL(for: screen) {
+            let source = WallpaperMasker.isMaskFile(current) ? cachedOriginalURL : current
+            if let source, WallpaperMasker.isStaticImage(source) {
+                unsupportedWallpaper = false
+                render(source: source, screen: screen)
+                return
+            }
+        }
+
         pendingCount += 1
         isProcessing = true
 
@@ -104,7 +119,6 @@ final class OverlayManager: ObservableObject {
                 )
             } catch {
                 failure = error
-                NSLog("StupidNotch: failed to apply mask: \(error)")
             }
             DispatchQueue.main.async {
                 guard let self else { return }
@@ -115,7 +129,7 @@ final class OverlayManager: ObservableObject {
                     self.isApplied = false
                 } else if let result = result {
                     self.cachedOriginalURL = result.cachedOriginal
-                    AppSettings.originalWallpaperPath = result.cachedOriginal.path
+                    AppSettings.shared.originalWallpaperPath = result.cachedOriginal.path
                     self.isApplied = true
                     self.unsupportedWallpaper = false
                 }

@@ -1,30 +1,17 @@
 import Cocoa
 import SwiftUI
 
+@MainActor
 final class AppDelegate: NSObject, NSApplicationDelegate {
-    private var window: NSWindow!
-    private var manager: OverlayManager!
+    private let settings = AppSettings.shared
+    private let overlay = OverlayManager()
+    private lazy var notch: NotchController = NotchController(settings: settings)
+
+    private var settingsWindow: NSWindow?
+    private let settingsController = SettingsController()
 
     func applicationDidFinishLaunching(_ notification: Notification) {
-        manager = OverlayManager()
-
-        let content = SettingsView(manager: manager)
-        let hosting = NSHostingController(rootView: content)
-
-        window = NSWindow(
-            contentRect: NSRect(x: 0, y: 0, width: 360, height: 420),
-            styleMask: [.titled, .closable, .miniaturizable],
-            backing: .buffered,
-            defer: false
-        )
-        window.title = "StupidNotch"
-        window.contentViewController = hosting
-        window.center()
-        window.setFrameAutosaveName("StupidNotchMainWindow")
-        window.isReleasedWhenClosed = false
-        window.makeKeyAndOrderFront(nil)
-
-        NSApp.activate(ignoringOtherApps: true)
+        notch.start()
 
         NotificationCenter.default.addObserver(
             self,
@@ -41,10 +28,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     }
 
     func applicationShouldHandleReopen(_ sender: NSApplication, hasVisibleWindows flag: Bool) -> Bool {
-        if !flag {
-            window.makeKeyAndOrderFront(nil)
-            NSApp.activate(ignoringOtherApps: true)
-        }
+        openSettings(nil)
         return true
     }
 
@@ -52,11 +36,45 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         return false
     }
 
+    @objc func openSettings(_ sender: Any?) {
+        if let w = settingsWindow {
+            w.makeKeyAndOrderFront(nil)
+            NSApp.activate(ignoringOtherApps: true)
+            return
+        }
+        let root = SettingsRoot(settings: settings, overlay: overlay, controller: settingsController, notch: notch)
+        let host = NSHostingController(rootView: root)
+        let w = NSWindow(contentViewController: host)
+        w.title = ""
+        w.styleMask = [.titled, .closable, .miniaturizable, .resizable, .fullSizeContentView]
+
+        w.titleVisibility = .hidden
+        w.titlebarAppearsTransparent = true
+        w.setContentSize(NSSize(width: 760, height: 560))
+        w.setFrameAutosaveName("StupidNotchSettingsWindow")
+        w.center()
+        w.isReleasedWhenClosed = false
+        w.makeKeyAndOrderFront(nil)
+        settingsWindow = w
+        NSApp.activate(ignoringOtherApps: true)
+
+        NotificationCenter.default.addObserver(
+            forName: NSWindow.willCloseNotification,
+            object: w,
+            queue: .main
+        ) { [weak self] _ in
+            guard let self else { return }
+            self.notch.pinnedFromSettings = false
+            self.notch.setExpanded(false, animated: true)
+        }
+    }
+
     @objc private func screensChanged() {
-        manager.refreshState()
+        overlay.refreshState()
+        notch.rebuildWindow()
     }
 
     @objc private func workspaceChanged() {
-        manager.refreshState()
+        overlay.refreshState()
     }
 }

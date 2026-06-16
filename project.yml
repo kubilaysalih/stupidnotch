@@ -1,0 +1,27 @@
+name: StupidNotch
+options:
+  bundleIdPrefix: io.kubilay
+  deploymentTarget:
+    macOS: "14.0"
+  createIntermediateGroups: true
+targets:
+  StupidNotch:
+    type: application
+    platform: macOS
+    deploymentTarget: "14.0"
+    sources:
+      - path: Sources
+      - path: Resources/StupidNotch.icns
+        buildPhase: resources
+    settings:
+      base:
+        INFOPLIST_FILE: Resources/Info.plist
+        PRODUCT_BUNDLE_IDENTIFIER: io.kubilay.stupidnotch
+        PRODUCT_NAME: StupidNotch
+        MARKETING_VERSION: "1.2"
+        CURRENT_PROJECT_VERSION: "3"
+        SWIFT_VERSION: "5.9"
+        CODE_SIGN_STYLE: Automatic
+        CODE_SIGN_IDENTITY: "-"
+        ENABLE_HARDENED_RUNTIME: NO
+        ASSETCATALOG_COMPILER_GENERATE_ASSET_SYMBOLS: NO
